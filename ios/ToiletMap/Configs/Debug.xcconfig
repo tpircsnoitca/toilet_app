@@ -1,0 +1,6 @@
+#include "DeviceDebug.xcconfig"
+#include "SimulatorDebug.xcconfig"
+INFOPLIST_FILE = ToiletMap/Info.Debug.plist
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.ToiletMap
+#include? "Local.xcconfig"

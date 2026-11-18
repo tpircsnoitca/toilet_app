@@ -1,0 +1,47 @@
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+*.xcarchive/
+*.ipa
+/ios/ToiletMap/Configs/Local.xcconfig
+
+# Local database, exports, and analysis
+/backend/data/
+/backend/reports/
+/reports/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+
+# Python and build output
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage*
+htmlcov/
+node_modules/
+build/
+dist/
+DerivedData/
+*.log
+
+# IDE and OS state
+.DS_Store
+.idea/
+.vscode/
+xcuserdata/
+*.xcuserstate

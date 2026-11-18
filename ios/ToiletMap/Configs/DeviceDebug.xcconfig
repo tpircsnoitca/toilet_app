@@ -1,0 +1,4 @@
+// Physical iPhone and Mac must share a Wi-Fi network.
+// The empty expansion keeps the URL's slashes from starting an xcconfig comment.
+API_HOST[sdk=iphoneos*] = your-mac.local
+API_BASE_URL[sdk=iphoneos*] = http:/$()/$(API_HOST):8000

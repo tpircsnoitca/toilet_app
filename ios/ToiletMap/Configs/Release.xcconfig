@@ -1,0 +1,6 @@
+// Replace this with your HTTPS deployment before distributing the app.
+API_BASE_URL = https:/$()/api.example.invalid
+INFOPLIST_FILE = ToiletMap/Info.plist
+
+PRODUCT_BUNDLE_IDENTIFIER = com.example.ToiletMap
+#include? "Local.xcconfig"
