@@ -1,8 +1,33 @@
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 GenderFilter = Literal["men", "women", "gender_friendly"]
+
+
+class ToiletFilters(BaseModel):
+    city: str | None = None
+    district: str | None = None
+    keyword: str | None = None
+    open_now: bool | None = None
+    has_men_toilet: bool | None = None
+    has_women_toilet: bool | None = None
+    has_diaper_table: bool | None = None
+    toilet_type: str | None = None
+    toilet_types: list[str] = Field(default_factory=list)
+    gender: list[GenderFilter] = Field(default_factory=list)
+    aggregate: bool = False
+
+
+class ToiletSearch(ToiletFilters):
+    bbox: str | None = None
+    limit: int = Field(default=200, ge=1, le=200)
+
+
+class NearbySearch(ToiletFilters):
+    lat: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    lng: float = Field(ge=-180, le=180, allow_inf_nan=False)
+    radius_m: int = Field(default=1000, ge=100, le=5000)
 
 
 class ToiletMapItem(BaseModel):

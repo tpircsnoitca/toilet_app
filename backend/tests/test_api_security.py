@@ -67,6 +67,7 @@ def test_admin_sync_accepts_valid_bearer_token(client, monkeypatch):
 )
 def test_invalid_bbox_is_rejected(client, bbox):
     assert client.get("/v1/toilets", params={"bbox": bbox}).status_code == 422
+    assert client.post("/v1/toilets", json={"bbox": bbox}).status_code == 422
 
 
 @pytest.mark.parametrize(
@@ -75,6 +76,26 @@ def test_invalid_bbox_is_rejected(client, bbox):
 def test_invalid_nearby_coordinates_are_rejected(client, lat, lng):
     response = client.get("/v1/toilets/nearby", params={"lat": lat, "lng": lng})
     assert response.status_code == 422
+    response = client.post("/v1/toilets/nearby", json={"lat": lat, "lng": lng})
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("path", "location"),
+    [
+        ("/v1/toilets", {"bbox": "-180,-90,180,90", "limit": 1}),
+        ("/v1/toilets/nearby", {"lat": 25.0478, "lng": 121.517, "radius_m": 5000}),
+    ],
+)
+def test_json_search_matches_legacy_search(client, path, location):
+    filters = {**location, "aggregate": True, "gender": ["men", "women"]}
+    legacy = client.get(path, params=filters)
+    private = client.post(path, json=filters)
+
+    assert legacy.status_code == private.status_code == 200
+    assert legacy.json() == private.json()
+    assert private.json()["items"]
+    assert not private.request.url.query
 
 
 def test_valid_coordinate_boundaries_are_accepted(client):

@@ -25,12 +25,14 @@ let hasLoaded = false;
 const cards = new Map();
 const pins = new Map();
 
-function filterQuery() {
-  const query = new URLSearchParams({ aggregate: "true", limit: String(limit) });
-  for (const input of genders) if (input.checked) query.append("gender", input.value);
-  if (byId("accessible").checked) query.append("toilet_types", "accessible");
-  if (byId("diaper").checked) query.set("has_diaper_table", "true");
-  return query;
+function searchFilters() {
+  return {
+    aggregate: true,
+    limit,
+    gender: genders.filter((input) => input.checked).map((input) => input.value),
+    toilet_types: byId("accessible").checked ? ["accessible"] : [],
+    has_diaper_table: byId("diaper").checked ? true : undefined,
+  };
 }
 
 function setPanel(level) {
@@ -169,14 +171,18 @@ function applyResults(items) {
   showStatus(results.length ? "" : "這個區域沒有符合條件的廁所，請移動地圖或調整篩選條件。");
 }
 
-async function fetchViewport(bounds, query, signal) {
-  const params = new URLSearchParams(query);
+async function fetchViewport(bounds, filters, signal) {
   const clamp = (value, limit) => Math.max(-limit, Math.min(limit, value));
-  params.set("bbox", [
+  const bbox = [
     clamp(bounds.getWest(), 180), clamp(bounds.getSouth(), 90),
     clamp(bounds.getEast(), 180), clamp(bounds.getNorth(), 90),
-  ].join(","));
-  const response = await fetch("/v1/toilets?" + params, { signal });
+  ].join(",");
+  const response = await fetch("/v1/toilets", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...filters, bbox }),
+    signal,
+  });
   if (!response.ok) throw new Error("Toilet request failed");
   const { items } = await response.json();
   if (!Array.isArray(items)) throw new Error("Unexpected toilet response");
@@ -185,8 +191,8 @@ async function fetchViewport(bounds, query, signal) {
 
 async function loadViewport() {
   const bounds = map.getBounds();
-  const query = filterQuery();
-  const key = query.toString();
+  const filters = searchFilters();
+  const key = JSON.stringify(filters);
   const inView = (item) => bounds.contains([item.lat, item.lng]);
   if (cache?.key === key && Date.now() - cache.time < 30000 && cache.bounds.contains(bounds)) {
     applyResults(cache.items.filter(inView));
@@ -198,10 +204,10 @@ async function loadViewport() {
   showStatus(hasLoaded ? "正在更新這個區域的廁所…" : "");
   try {
     const buffered = bounds.pad(0.25);
-    const items = await fetchViewport(buffered, query, signal);
+    const items = await fetchViewport(buffered, filters, signal);
     if (signal.aborted) return;
     if (items.length >= limit) {
-      const visible = await fetchViewport(bounds, query, signal);
+      const visible = await fetchViewport(bounds, filters, signal);
       if (!signal.aborted) applyResults(visible);
     } else {
       cache = { key, bounds: buffered, items, time: Date.now() };

@@ -4,6 +4,7 @@ set -euo pipefail
 : "${PROJECT:?Set GCP_PROJECT_ID}"
 : "${CHECKPOINT_BUCKET:?Set GCP_CHECKPOINT_BUCKET}"
 : "${RUNTIME_SERVICE_ACCOUNT:?Set GCP_RUNTIME_SERVICE_ACCOUNT}"
+: "${GRYPE:?Set GRYPE to the scanner executable}"
 region=asia-east1
 service=toilet-app
 registry="$region-docker.pkg.dev"
@@ -36,13 +37,15 @@ export TOILET_DB_PATH="$work/restored.sqlite3"
 unset TOILET_DB_PATH
 last_sync=$(jq -er .last_synced_at "$work/validated.json")
 metadata=$(jq -er '"taipei-features=\(.feed_counts["63000"]),new-taipei-features=\(.feed_counts["10001"]),last-synced-at=\(.last_synced_at)"' "$work/validated.json")
-gcloud storage cp "$work/checkpoint.sqlite3" "$checkpoint_uri" \
-    --if-generation-match="$generation" --custom-metadata="$metadata"
 echo "::endgroup::"
 
-echo "::group::Build, smoke-test and publish the image"
+echo "::group::Build, scan, smoke-test and publish the image"
 cp "$work/checkpoint.sqlite3" checkpoint.sqlite3
 docker build --platform=linux/amd64 --tag="$image" .
+if ! "$GRYPE" "docker:$image" --only-fixed --fail-on high -o json > "$work/image-scan.json"; then
+    echo "::error::Image scan failed or found a fixable high or critical vulnerability."
+    exit 1
+fi
 container_id=$(docker run --rm --detach --cpus=1 --memory=512m --publish=127.0.0.1::8080 "$image")
 local_address=$(docker port "$container_id" 8080/tcp)
 if ! python .github/scripts/smoke_release.py "http://$local_address" "$last_sync"; then
@@ -51,6 +54,8 @@ if ! python .github/scripts/smoke_release.py "http://$local_address" "$last_sync
 fi
 docker stop "$container_id" >/dev/null
 container_id=
+gcloud storage cp "$work/checkpoint.sqlite3" "$checkpoint_uri" \
+    --if-generation-match="$generation" --custom-metadata="$metadata"
 gcloud auth configure-docker "$registry" --quiet
 docker push "$image"
 digest=$(gcloud artifacts docker images describe "$image" --project="$PROJECT" \
