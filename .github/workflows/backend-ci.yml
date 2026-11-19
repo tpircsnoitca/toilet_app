@@ -5,10 +5,19 @@ on:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/deploy.yml"
+      - ".github/scripts/**"
+      - "Dockerfile"
+      - ".dockerignore"
   pull_request:
     paths:
       - "backend/**"
       - ".github/workflows/backend-ci.yml"
+      - ".github/workflows/deploy.yml"
+      - ".github/scripts/**"
+      - "Dockerfile"
+      - ".dockerignore"
+  workflow_call:
 
 jobs:
   lint-and-test:
@@ -32,7 +41,7 @@ jobs:
           enable-cache: true
 
       - name: Sync dependencies
-        run: uv sync --dev
+        run: uv sync --locked --dev
 
       - name: Ruff check
         run: uv run ruff check .

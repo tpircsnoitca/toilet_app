@@ -1,0 +1,62 @@
+name: Release Toilet Map
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 20 * * *'
+
+concurrency:
+  group: toilet-map-release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  backend-ci:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/backend-ci.yml
+    permissions:
+      contents: read
+
+  release:
+    needs: backend-ci
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install locked backend dependencies
+        working-directory: backend
+        run: uv sync --locked --no-dev
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+
+      - name: Sync, validate, publish and deploy
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT_ID }}
+          CHECKPOINT_BUCKET: ${{ vars.GCP_CHECKPOINT_BUCKET }}
+          RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
+        run: bash .github/scripts/release.sh

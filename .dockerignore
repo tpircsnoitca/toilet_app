@@ -1,0 +1,16 @@
+**
+
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/app/*.py
+!backend/app/core/*.py
+!backend/app/ingestion/*.py
+!backend/app/models/*.py
+!backend/app/services/*.py
+!backend/web/index.html
+!backend/web/styles.css
+!backend/web/*.js
+!backend/web/*.mjs
+
+# Stage a validated SQLite backup at this path before building.
+!checkpoint.sqlite3
