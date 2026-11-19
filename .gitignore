@@ -13,6 +13,10 @@
 *.ipa
 /ios/ToiletMap/Configs/Local.xcconfig
 
+# Local Markdown files
+*.md
+!/docs/DEPLOYMENT.md
+
 # Local database, exports, and analysis
 /backend/data/
 /backend/reports/
