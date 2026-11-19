@@ -18,7 +18,7 @@ for attempt in range(6):
         with request("/health") as response:
             assert json.load(response)["status"] == "ok"
         break
-    except (URLError, TimeoutError):
+    except (URLError, ConnectionError, TimeoutError):
         if attempt == 5:
             raise
         time.sleep(3)
