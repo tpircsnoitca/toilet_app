@@ -6,7 +6,7 @@ dependencies = [
     "fastapi>=0.129.1",
     "httpx>=0.28.1",
     "pydantic>=2.12.5",
-    "uvicorn[standard]>=0.41.0",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
