@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>廁所地圖</title>
+  <script src="/web/theme.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <link rel="stylesheet" href="/web/styles.css">
@@ -24,6 +25,11 @@
       <label class="chip"><input id="accessible" type="checkbox"> 無障礙</label>
       <label class="chip"><input id="diaper" type="checkbox"> 尿布台</label>
     </div>
+    <select id="theme" class="theme-picker" aria-label="外觀" hidden>
+      <option value="system">跟隨系統</option>
+      <option value="light">淺色模式</option>
+      <option value="dark">深色模式</option>
+    </select>
   </header>
 
   <main id="workspace" class="workspace" data-panel="nearby">
