@@ -6,6 +6,9 @@ const genderMenu = byId("gender-menu");
 const genders = [...filters.querySelectorAll('[name="gender"]')];
 const list = byId("list");
 const workspace = byId("workspace");
+const panel = byId("nearby-panel");
+const panelTop = byId("panel-top");
+const panelHandle = byId("panel-handle");
 const dialog = byId("details");
 const mobile = matchMedia("(max-width: 720px)");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -22,6 +25,7 @@ let request = null;
 let timer = null;
 let cache = null;
 let hasLoaded = false;
+let panelAnimation;
 const cards = new Map();
 const pins = new Map();
 
@@ -35,11 +39,103 @@ function searchFilters() {
   };
 }
 
-function setPanel(level) {
+function resizeMap() {
+  if (!workspace.hasAttribute("data-panel-moving")) {
+    map?.invalidateSize({ animate: false, debounceMoveend: true });
+  }
+}
+
+function clearPanelMotion() {
+  panelAnimation?.cancel();
+  panelAnimation = null;
+  workspace.style.removeProperty("--panel-height");
+  delete workspace.dataset.panelMoving;
+}
+
+function setPanel(level, animate = false) {
+  const shouldAnimate = animate && mobile.matches && !reduceMotion.matches;
+  const from = shouldAnimate ? panel.offsetHeight : 0;
+  const wasMoving = workspace.hasAttribute("data-panel-moving");
+  clearPanelMotion();
   workspace.dataset.panel = level;
-  const toggle = byId("panel-toggle");
-  toggle.setAttribute("aria-expanded", String(level !== "closed"));
-  toggle.textContent = level === "expanded" ? "收合清單" : "展開清單";
+  panelHandle.setAttribute("aria-expanded", String(level !== "closed"));
+  panelHandle.setAttribute("aria-label", level === "expanded" ? "收合清單" : "展開清單");
+  const to = shouldAnimate ? panel.offsetHeight : 0;
+  if (Math.abs(to - from) < 1) {
+    if (wasMoving) resizeMap();
+    return;
+  }
+
+  workspace.dataset.panelMoving = "";
+  workspace.style.setProperty("--panel-height", to + "px");
+  const rebound = Math.min(12, Math.abs(to - from) * 0.08, Math.max(0, workspace.clientHeight - 44 - to));
+  const rows = (height) => "minmax(44px, 1fr) " + height + "px";
+  panelAnimation = workspace.animate([
+    { gridTemplateRows: rows(from), easing: "cubic-bezier(.18,.8,.25,1)" },
+    { gridTemplateRows: rows(to), offset: 0.7, easing: "ease-in-out" },
+    { gridTemplateRows: rows(to + rebound), offset: 0.85, easing: "ease-in-out" },
+    { gridTemplateRows: rows(to) },
+  ], { duration: 360 });
+  panelAnimation.onfinish = () => {
+    clearPanelMotion();
+    resizeMap();
+  };
+}
+
+function setupPanelHandle() {
+  let press;
+  let suppressClick = false;
+  panelHandle.addEventListener("pointerdown", (event) => {
+    if (!event.isPrimary || event.button !== 0) return;
+    press = {
+      id: event.pointerId, x: event.clientX, y: event.clientY, height: panel.offsetHeight,
+      minHeight: panelTop.offsetHeight + panel.clientTop, maxHeight: workspace.clientHeight - 44,
+      dragging: false,
+    };
+    suppressClick = false;
+    panelHandle.setPointerCapture(event.pointerId);
+  });
+  panelHandle.addEventListener("pointermove", (event) => {
+    if (press?.id !== event.pointerId) return;
+    const dx = event.clientX - press.x;
+    const dy = event.clientY - press.y;
+    if (!press.dragging && (Math.abs(dy) < 8 || Math.abs(dy) <= Math.abs(dx))) return;
+    if (!press.dragging) {
+      clearPanelMotion();
+      workspace.dataset.panelMoving = "";
+      press.dragging = true;
+    }
+    const height = Math.max(press.minHeight, Math.min(press.height - dy, press.maxHeight));
+    workspace.style.setProperty("--panel-height", height + "px");
+  });
+  panelHandle.addEventListener("pointerup", (event) => {
+    if (press?.id !== event.pointerId) return;
+    const dx = event.clientX - press.x;
+    const dy = event.clientY - press.y;
+    const swipe = Math.abs(dy) >= 36 && Math.abs(dy) > Math.abs(dx);
+    suppressClick = press.dragging || Math.hypot(dx, dy) >= 12;
+    if (swipe || press.dragging) {
+      let level = workspace.dataset.panel;
+      if (swipe) level = dy < 0 ? "expanded" : "closed";
+      setPanel(level, true);
+    }
+    press = null;
+  });
+  panelHandle.addEventListener("lostpointercapture", (event) => {
+    if (press?.id !== event.pointerId) return;
+    if (press.dragging) setPanel(workspace.dataset.panel, true);
+    press = null;
+  });
+  panelHandle.addEventListener("click", (event) => {
+    if (suppressClick && event.detail > 0) return;
+    const level = workspace.dataset.panel;
+    setPanel(level === "expanded" ? "closed" : level === "closed" ? "nearby" : "expanded", true);
+  });
+  mobile.addEventListener("change", () => {
+    press = null;
+    clearPanelMotion();
+    resizeMap();
+  });
 }
 
 function showStatus(message = "", retry = false) {
@@ -301,7 +397,7 @@ function start() {
   map.on("movestart", () => { clearTimeout(timer); request?.abort(); });
   map.on("moveend", () => { scheduleLoad(); });
   map.on("dragstart", () => { selectedIds = null; });
-  new ResizeObserver(() => map.invalidateSize({ animate: false, debounceMoveend: true })).observe(byId("map"));
+  new ResizeObserver(resizeMap).observe(byId("map"));
   filters.addEventListener("change", updateFilters);
   byId("clear-gender").addEventListener("click", () => {
     for (const input of genders) input.checked = false;
@@ -315,10 +411,6 @@ function start() {
     genderMenu.open = false;
     byId("gender-label").focus();
   });
-  byId("panel-toggle").addEventListener("click", () => {
-    const level = workspace.dataset.panel;
-    setPanel(level === "expanded" ? "closed" : level === "closed" ? "nearby" : "expanded");
-  });
   byId("show-all").addEventListener("click", () => {
     selectedIds = null;
     renderList();
@@ -329,4 +421,6 @@ function start() {
   locate();
 }
 
+byId("show-data-source").addEventListener("click", () => byId("data-source").showModal());
+setupPanelHandle();
 start();
