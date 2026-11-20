@@ -1,4 +1,4 @@
-import { directionActions, element, formatDistance, toiletInformation } from "./toilet-view.mjs";
+import { appendDirections, element, formatDistance, toiletInformation, toiletPinIcon } from "./toilet-view.mjs?v=5";
 
 const byId = (id) => document.getElementById(id);
 const filters = byId("filters");
@@ -58,15 +58,16 @@ function showLocationStatus(message = "") {
 
 function showDetails(item) {
   const content = byId("details-content");
-  const actions = element("div", "actions");
-  actions.append(...directionActions(item));
-  content.replaceChildren(toiletInformation(item), actions, element("h3", "dialog-section-title", "各廁所詳情"));
+  const header = element("div", "card-row");
+  header.append(element("span", "name", item.name));
+  appendDirections(header, item);
+  content.replaceChildren(header, element("h3", "dialog-section-title", "各廁所詳情"));
   for (const record of item.sourceRecords ?? []) {
     const row = element("article", "source-card");
     if (item.matchingSourceIds?.includes(record.id)) {
       row.append(element("span", "match", "符合目前的篩選條件"));
     }
-    row.append(toiletInformation(record));
+    row.append(toiletInformation(record, { showStatus: false }));
     content.append(row);
   }
   dialog.showModal();
@@ -103,17 +104,18 @@ function renderList() {
     const focus = element("button", "card-focus");
     focus.type = "button";
     focus.setAttribute("aria-description", "在地圖上顯示此廁所");
-    focus.append(toiletInformation(item, formatDistance(meters, Boolean(location))));
+    focus.append(toiletInformation(item, { distance: formatDistance(meters, Boolean(location)) }));
     focus.addEventListener("click", () => focusOnMap(item));
-    const actions = element("div", "actions");
+    const row = element("div", "card-row");
+    row.append(focus);
+    appendDirections(row, item);
+    card.append(row);
     if (item.sourceRecords?.length > 1) {
       const details = element("button", "details-button", "查看 " + item.sourceRecords.length + " 筆廁所詳情");
       details.type = "button";
       details.addEventListener("click", () => showDetails(item));
-      actions.append(details);
+      card.append(details);
     }
-    actions.append(...directionActions(item));
-    card.append(focus, actions);
     fragment.append(card);
   }
   list.replaceChildren(fragment);
@@ -140,8 +142,14 @@ function renderMarkers() {
   }
   for (const group of groups.values()) {
     const count = group.length;
-    const pin = element("button", "toilet-pin", count === 1 ? "🚽" : "🚽 " + count);
+    const pin = element("button", "toilet-pin");
     pin.type = "button";
+    pin.append(toiletPinIcon());
+    if (count > 1) {
+      const badge = element("span", "toilet-pin-count", String(count));
+      badge.setAttribute("aria-hidden", "true");
+      pin.append(badge);
+    }
     pin.dataset.selected = String(group.some((item) => item.id === focusedId));
     pins.set(group, pin);
     pin.setAttribute("aria-label", count === 1 ? group[0].name : count + " 個廁所地點，查看清單");

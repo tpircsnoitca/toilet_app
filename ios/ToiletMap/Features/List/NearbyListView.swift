@@ -18,15 +18,18 @@ struct NearbyListView: View {
                         VStack(alignment: .leading, spacing: 0) {
                             // A standard button cancels its tap when the ScrollView
                             // takes over a drag. Keep directions as a sibling button.
-                            Button {
-                                onSelectToilet(toilet)
-                            } label: {
-                                ToiletInformationView(toilet: toilet, distanceDescription: distanceDescription(toilet))
-                                    .padding(16)
-                                    .contentShape(Rectangle())
+                            HStack(alignment: .top, spacing: 12) {
+                                Button {
+                                    onSelectToilet(toilet)
+                                } label: {
+                                    ToiletInformationView(toilet: toilet, distanceDescription: distanceDescription(toilet))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("在地圖上顯示此廁所")
+                                ToiletDirectionsButton(toilet: toilet)
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityHint("在地圖上顯示此廁所")
+                            .padding(16)
                             if let records = toilet.sourceRecords, records.count > 1 {
                                 Button {
                                     detailToilet = toilet
@@ -37,10 +40,8 @@ struct NearbyListView: View {
                                         .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.bordered)
-                                .padding(.horizontal, 16).padding(.bottom, 12)
-                            }
-                            ToiletDirectionsButton(toilet: toilet)
                                 .padding(.horizontal, 16).padding(.bottom, 16)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))

@@ -18,7 +18,16 @@ struct MapHomeView: View {
     @State private var panelLevel = 1
     @GestureState private var panelDrag: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
     @State private var hasCenteredOnLocation = false
+
+    private var markerBackground: Color {
+        colorScheme == .dark ? Color(red: 0.66, green: 0.79, blue: 1) : Color(red: 0.09, green: 0.23, blue: 0.50)
+    }
+
+    private var markerForeground: Color {
+        colorScheme == .dark ? Color(red: 0.05, green: 0.14, blue: 0.29) : .white
+    }
 
     var body: some View {
         NavigationStack {
@@ -123,21 +132,32 @@ struct MapHomeView: View {
                                 selectedToiletID = group.items.sorted { $0.id < $1.id }.first?.id
                                 withAnimation(reduceMotion ? nil : .snappy) { panelLevel = 1 }
                             } label: {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "toilet.fill")
-                                    if group.items.count > 1 {
-                                        Text("\(group.items.count)").monospacedDigit()
+                                let selected = group.items.contains { $0.id == selectedToiletID }
+                                Image(systemName: "toilet")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundStyle(markerForeground)
+                                    .frame(width: 36, height: 36)
+                                    .background(markerBackground, in: Circle())
+                                    .overlay(Circle().strokeBorder(markerForeground, lineWidth: 2))
+                                    .overlay {
+                                        if selected {
+                                            Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3)
+                                        }
                                     }
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 11)
-                                .frame(height: 36)
-                                .background(group.items.contains { $0.id == selectedToiletID } ? Color.indigo : .blue, in: Capsule())
-                                .overlay(Capsule().stroke(.white, lineWidth: 2))
-                                .shadow(color: .black.opacity(0.15), radius: 3, y: 2)
-                                .frame(minWidth: 44, minHeight: 44)
-                                .contentShape(Rectangle())
+                                    .shadow(color: .black.opacity(0.30), radius: 2, y: 1)
+                                    .frame(width: 44, height: 44)
+                                    .overlay(alignment: .topTrailing) {
+                                        if group.items.count > 1 {
+                                            Text("\(group.items.count)")
+                                                .font(.system(size: 10, weight: .bold).monospacedDigit())
+                                                .foregroundStyle(markerForeground)
+                                                .padding(.horizontal, 4)
+                                                .frame(minWidth: 16, minHeight: 16)
+                                                .background(markerBackground, in: Capsule())
+                                                .overlay(Capsule().strokeBorder(markerForeground, lineWidth: 1))
+                                        }
+                                    }
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(group.items.count == 1 ? group.items[0].name : "\(group.items.count) 個廁所地點，點一下查看清單")
