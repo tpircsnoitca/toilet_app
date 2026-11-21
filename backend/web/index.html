@@ -7,7 +7,7 @@
   <script src="/web/theme.js?v=2"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="/web/styles.css?v=12">
+  <link rel="stylesheet" href="/web/styles.css?v=19">
 </head>
 <body>
   <header class="toolbar">
@@ -18,37 +18,27 @@
         </span>
         廁所地圖
       </h1>
+    </div>
+    <div class="toolbar-actions">
       <button id="show-data-source" type="button" aria-label="資料來源 · 環境部環境管理署"
         aria-haspopup="dialog" aria-controls="data-source">
-        <span class="data-source-name">環境部環境管理署</span> <span aria-hidden="true">ⓘ</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg>
+        <span class="data-source-name">環境部環境管理署</span>
+      </button>
+      <button id="theme" class="theme-switch" type="button" role="switch"
+        aria-label="深色模式" aria-checked="false" hidden>
+        <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>
+        </svg>
+        <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20.5 15A9 9 0 0 1 9 3.5 9 9 0 1 0 20.5 15Z"/>
+        </svg>
       </button>
     </div>
-    <div id="filters" class="filters" role="group" aria-label="篩選廁所">
-      <details id="gender-menu" class="gender-menu">
-        <summary id="gender-label" class="chip">性別</summary>
-        <div class="gender-options">
-          <button id="clear-gender" type="button">所有性別</button>
-          <label><input type="checkbox" name="gender" value="men"> 男廁</label>
-          <label><input type="checkbox" name="gender" value="women"> 女廁</label>
-          <label><input type="checkbox" name="gender" value="gender_friendly"> 性別友善</label>
-        </div>
-      </details>
-      <label class="chip"><input id="accessible" type="checkbox"> 無障礙</label>
-      <label class="chip"><input id="diaper" type="checkbox"> 尿布台</label>
-    </div>
-    <button id="theme" class="theme-switch" type="button" role="switch"
-      aria-label="深色模式" aria-checked="false" hidden>
-      <svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="4"/>
-        <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>
-      </svg>
-      <svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M20.5 15A9 9 0 0 1 9 3.5 9 9 0 1 0 20.5 15Z"/>
-      </svg>
-    </button>
   </header>
 
-  <main id="workspace" class="workspace" data-panel="nearby">
+  <main id="workspace" class="workspace" data-panel="closed">
     <section class="map-area" aria-label="廁所地圖">
       <div id="map" role="group" aria-label="互動地圖"></div>
       <button id="locate" type="button" class="locate" aria-label="回到我的位置" title="回到我的位置">
@@ -63,8 +53,29 @@
       <div id="panel-top">
         <header class="panel-head">
           <h2 id="nearby-title">附近廁所</h2>
-          <p id="count" aria-live="polite"></p>
-          <button id="panel-handle" type="button" aria-controls="list" aria-expanded="true">展開清單</button>
+          <div id="filters" class="filters" role="group" aria-label="篩選廁所">
+            <details id="gender-menu" class="gender-menu">
+              <summary id="gender-label" class="chip"><span id="gender-text">性別</span></summary>
+              <div class="gender-options">
+                <button id="clear-gender" type="button">所有性別</button>
+                <label><input type="checkbox" name="gender" value="men"> 男廁</label>
+                <label><input type="checkbox" name="gender" value="women"> 女廁</label>
+                <label><input type="checkbox" name="gender" value="gender_friendly"> 性別友善</label>
+              </div>
+            </details>
+            <label class="chip filter-switch">
+              <span>無障礙</span>
+              <input id="accessible" type="checkbox" role="switch">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+            <label class="chip filter-switch">
+              <span>尿布檯</span>
+              <input id="diaper" type="checkbox" role="switch">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+          </div>
+          <p id="count" aria-live="polite" aria-atomic="true"></p>
+          <button id="panel-handle" type="button" aria-controls="list" aria-expanded="false">展開清單</button>
           <button id="show-all" type="button" hidden>顯示全部</button>
         </header>
         <div class="notices">
@@ -99,6 +110,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script type="module" src="/web/app.js?v=10"></script>
+  <script type="module" src="/web/app.js?v=15"></script>
 </body>
 </html>

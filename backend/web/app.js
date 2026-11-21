@@ -1,10 +1,11 @@
-import { appendDirections, element, formatDistance, toiletInformation, toiletPinIcon } from "./toilet-view.mjs?v=6";
+import { appendDirections, element, filterIcon, formatDistance, mapFocusIcon, toiletInformation, toiletPinIcon } from "./toilet-view.mjs?v=9";
 
 const byId = (id) => document.getElementById(id);
 const filters = byId("filters");
 const genderMenu = byId("gender-menu");
 const genders = [...filters.querySelectorAll('[name="gender"]')];
 const list = byId("list");
+const toolbar = document.querySelector(".toolbar");
 const workspace = byId("workspace");
 const panel = byId("nearby-panel");
 const panelTop = byId("panel-top");
@@ -64,10 +65,16 @@ function setPanel(level, animate = false) {
   const from = shouldAnimate ? panel.offsetHeight : 0;
   clearPanelMotion();
   workspace.dataset.panel = level;
-  panelHandle.setAttribute("aria-expanded", String(level !== "closed"));
+  panelHandle.setAttribute("aria-expanded", String(level === "expanded"));
   panelHandle.textContent = level === "expanded" ? "收合清單" : "展開清單";
   const to = shouldAnimate ? panel.offsetHeight : 0;
-  if (Math.abs(to - from) < 1) return;
+  const revealSelection = () => {
+    if (level === "expanded") cards.get(focusedId)?.scrollIntoView({ block: "nearest" });
+  };
+  if (Math.abs(to - from) < 1) {
+    revealSelection();
+    return;
+  }
 
   workspace.dataset.panelMoving = "";
   workspace.style.setProperty("--panel-height", to + "px");
@@ -79,7 +86,17 @@ function setPanel(level, animate = false) {
     { gridTemplateRows: rows(to + rebound), offset: 0.85, easing: "ease-in-out" },
     { gridTemplateRows: rows(to) },
   ], { duration: 360 });
-  panelAnimation.onfinish = clearPanelMotion;
+  panelAnimation.onfinish = () => {
+    clearPanelMotion();
+    revealSelection();
+  };
+}
+
+function placeFilters() {
+  const active = document.activeElement;
+  if (mobile.matches) toolbar.append(filters);
+  else byId("count").before(filters);
+  if (filters.contains(active)) active.focus({ preventScroll: true });
 }
 
 function setupPanelHandle() {
@@ -130,7 +147,7 @@ function setupPanelHandle() {
   panelHandle.addEventListener("click", (event) => {
     if (suppressClick && event.detail > 0) return;
     const level = workspace.dataset.panel;
-    setPanel(level === "expanded" ? "closed" : level === "closed" ? "nearby" : "expanded", true);
+    setPanel(level === "expanded" ? "closed" : "expanded", true);
   });
   mobile.addEventListener("change", () => {
     press = null;
@@ -179,10 +196,6 @@ function updateCardSelection() {
 function focusOnMap(item) {
   focusedId = item.id;
   updateCardSelection();
-  if (mobile.matches) {
-    setPanel("closed");
-    byId("map").focus({ preventScroll: true });
-  }
   map.setView([item.lat, item.lng], Math.max(16, map.getZoom()), { animate: !reduceMotion.matches });
 }
 
@@ -195,15 +208,18 @@ function renderList() {
   const prefix = selectedIds ? "所選位置有 " : "地圖範圍內有 ";
   byId("count").textContent = prefix + items.length + " 個廁所地點";
   byId("show-all").hidden = !selectedIds;
+  const active = document.activeElement;
+  const activeId = active.closest(".card")?.dataset.id;
   const fragment = document.createDocumentFragment();
   cards.clear();
   for (const { item, meters } of items) {
     const card = element("li", "card");
+    card.dataset.id = item.id;
     cards.set(item.id, card);
     const focus = element("button", "card-focus");
     focus.type = "button";
     focus.setAttribute("aria-description", "在地圖上顯示此廁所");
-    focus.append(toiletInformation(item, { distance: formatDistance(meters, Boolean(location)) }));
+    focus.append(toiletInformation(item, { distance: formatDistance(meters, Boolean(location)) }), mapFocusIcon());
     focus.addEventListener("click", () => focusOnMap(item));
     card.append(focus);
     const actions = element("div", "card-actions");
@@ -219,14 +235,22 @@ function renderList() {
   }
   list.replaceChildren(fragment);
   updateCardSelection();
+  if (activeId) {
+    const control = cards.get(activeId)?.getElementsByClassName(active.className)[0];
+    control?.focus({ preventScroll: true });
+  }
 }
 
-function selectMarker(group) {
+function selectMarker(group, event) {
   selectedIds = group.length > 1 ? new Set(group.map((item) => item.id)) : null;
   focusedId = group[0].id;
-  if (mobile.matches && workspace.dataset.panel === "closed") setPanel("nearby");
   renderList();
-  cards.get(focusedId)?.scrollIntoView({ block: "nearest", behavior: reduceMotion.matches ? "instant" : "smooth" });
+  if (mobile.matches) {
+    setPanel("expanded");
+    if (event.detail === 0) cards.get(focusedId)?.querySelector(".card-focus").focus({ preventScroll: true });
+  } else {
+    cards.get(focusedId)?.scrollIntoView({ block: "nearest", behavior: reduceMotion.matches ? "instant" : "smooth" });
+  }
 }
 
 function renderMarkers() {
@@ -253,7 +277,7 @@ function renderMarkers() {
     pins.set(group, pin);
     pin.setAttribute("aria-label", count === 1 ? group[0].name : count + " 個廁所地點，查看清單");
     L.DomEvent.disableClickPropagation(pin);
-    pin.addEventListener("click", () => selectMarker(group));
+    pin.addEventListener("click", (event) => selectMarker(group, event));
     const center = [
       group.reduce((sum, item) => sum + item.lat, 0) / count,
       group.reduce((sum, item) => sum + item.lng, 0) / count,
@@ -370,7 +394,7 @@ function locate({ manual = false } = {}) {
 
 function updateFilters() {
   const count = genders.filter((input) => input.checked).length;
-  byId("gender-label").textContent = count ? "性別（" + count + "）" : "性別";
+  byId("gender-text").textContent = count ? "性別（" + count + "）" : "性別";
   byId("gender-label").dataset.active = String(count > 0);
   byId("clear-gender").setAttribute("aria-pressed", String(count === 0));
   selectedIds = null;
@@ -427,5 +451,9 @@ function start() {
 }
 
 byId("show-data-source").addEventListener("click", () => byId("data-source").showModal());
+byId("gender-label").prepend(filterIcon("gender"));
+for (const id of ["accessible", "diaper"]) byId(id).closest("label").prepend(filterIcon(id));
+placeFilters();
+mobile.addEventListener("change", placeFilters);
 setupPanelHandle();
 start();

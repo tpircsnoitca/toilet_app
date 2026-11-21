@@ -37,12 +37,16 @@ test("government labels render as text and cannot create HTML nodes", async () =
 test("nearby card shows status and only the available facilities", async () => {
   const { toiletInformation } = await import("../web/toilet-view.mjs");
   global.document = {
-    createElement() {
+    createElement(tag) {
       return {
-        dataset: {}, children: [], attributes: {},
+        tag, dataset: {}, children: [], attributes: {},
         append(...nodes) { this.children.push(...nodes); },
         setAttribute(name, value) { this.attributes[name] = value; },
       };
+    },
+    createElementNS(namespace, tag) {
+      assert.equal(namespace, "http://www.w3.org/2000/svg");
+      return this.createElement(tag);
     },
   };
   try {
@@ -52,12 +56,21 @@ test("nearby card shows status and only the available facilities", async () => {
     };
     const labels = (node) => node.attributes["aria-hidden"] === "true"
       ? [] : [node.textContent, ...node.children.flatMap(labels)].filter(Boolean);
-    assert.deepEqual(labels(toiletInformation(item)), ["公廁", "目前開放", "♂ 男廁"]);
-    const withFacilities = { ...item, hasDiaperTable: true, toiletTypes: ["accessible", "male", "gender_friendly", "family"] };
-    assert.deepEqual(labels(toiletInformation(withFacilities)),
-      ["公廁", "目前開放", "♂ 男廁", "性別友善", "親子廁所", "尿布台", "無障礙廁所"]);
+    assert.deepEqual(labels(toiletInformation(item)), ["公廁", "目前開放", "男廁"]);
+    const withFacilities = { ...item, hasDiaperTable: true, toiletTypes: ["accessible", "male", "female", "gender_friendly", "family"] };
+    const info = toiletInformation(withFacilities);
+    assert.deepEqual(labels(info),
+      ["公廁", "目前開放", "女廁", "男廁", "性別友善", "親子廁所", "尿布檯", "無障礙廁所"]);
     assert.deepEqual(labels(toiletInformation(withFacilities, { showStatus: false })),
-      ["公廁", "♂ 男廁", "性別友善", "親子廁所", "尿布台", "無障礙廁所"]);
+      ["公廁", "女廁", "男廁", "性別友善", "親子廁所", "尿布檯", "無障礙廁所"]);
+    const tags = info.children.find((node) => node.className === "badges").children;
+    const paths = tags.map(({ children: [icon] }) => {
+      assert.equal(icon.attributes["aria-hidden"], "true");
+      assert.equal(icon.children[0].tag, "svg");
+      return icon.children[0].children[0].attributes.d;
+    });
+    assert.ok(paths.every(Boolean));
+    assert.equal(new Set(paths).size, tags.length);
   } finally {
     delete global.document;
   }

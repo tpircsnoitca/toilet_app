@@ -13,6 +13,16 @@ function formatFloor(floor) {
   return aboveGround ? aboveGround[1] + " 樓" : floor;
 }
 
+const facilityIcons = {
+  gender: "M10 14a4 4 0 1 1 8 0 4 4 0 0 1-8 0Zm4 4v4m-2-2h4m1-9 4-4m-4 0h4v4m-10 0-6-6m0 4V5h4",
+  women: "M12 5.5a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z M10 8h4l3 9H7l3-9Zm.5 9v4m3-4v4",
+  men: "M12 5.5a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5Z M8 15V9a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v6m-6-4v10m4-10v10",
+  friendly: "M15 14a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-4 4v4m-2-2h4m1-9 5-5m-4 0h4v4m-11 1L3 6m0 4V6h4m-3 4 3-3",
+  family: "M12 8a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Zm-9 12v-2a4 4 0 0 1 4-4h3m10-1a2 2 0 1 0-4 0 2 2 0 0 0 4 0Zm-6 7a3 3 0 0 1 3-3h2a3 3 0 0 1 3 3",
+  diaper: "M8 10a2 2 0 1 0-4 0 2 2 0 0 0 4 0Zm2 2h4l2-4 3 2M3 15h18M6 15v5m12-5v5",
+  accessible: "M13 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm-1.5 2 .8 7H17l3 5h2M12 10h4m-.8 7a5.5 5.5 0 1 1-6.5-6.8",
+};
+
 function badgesFor(item) {
   const types = item.toiletTypes ?? [];
   const men = item.hasMenToilet ?? types.includes("male");
@@ -20,13 +30,13 @@ function badgesFor(item) {
   const friendly = types.includes("gender_friendly");
   const accessible = types.includes("accessible");
   const badges = [];
-  if (women) badges.push(["♀ 女廁", true]);
-  if (men) badges.push(["♂ 男廁", true]);
-  if (friendly) badges.push(["性別友善", true, "⚧"]);
-  if (types.includes("family")) badges.push(["親子廁所", true, "👪"]);
-  if (item.hasDiaperTable) badges.push(["尿布台", true]);
-  if (accessible) badges.push(["無障礙廁所", true, "♿"]);
-  if (!men && !women && !friendly && !(item.sourceCount > 1)) badges.push(["未標示性別", false]);
+  if (women) badges.push(["女廁", facilityIcons.women]);
+  if (men) badges.push(["男廁", facilityIcons.men]);
+  if (friendly) badges.push(["性別友善", facilityIcons.friendly]);
+  if (types.includes("family")) badges.push(["親子廁所", facilityIcons.family]);
+  if (item.hasDiaperTable) badges.push(["尿布檯", facilityIcons.diaper]);
+  if (accessible) badges.push(["無障礙廁所", facilityIcons.accessible]);
+  if (!men && !women && !friendly && !(item.sourceCount > 1)) badges.push(["未標示性別"]);
   return badges;
 }
 
@@ -48,18 +58,17 @@ export function toiletInformation(item, { distance, showStatus = true } = {}) {
     facts.append(status);
   }
   if (distance || showStatus) info.append(facts);
-  const badges = element("span", "badges");
-  for (const [label, present, icon] of badgesFor(item)) {
-    const badge = element("span", present ? "badge" : "badge absent");
-    if (icon) {
-      const symbol = element("span", "badge-icon", icon);
-      symbol.setAttribute("aria-hidden", "true");
-      badge.append(symbol);
+  const facilities = badgesFor(item);
+  if (facilities.length) {
+    const badges = element("span", "badges");
+    for (const [label, icon] of facilities) {
+      const badge = element("span", icon ? "badge" : "badge absent");
+      if (icon) badge.append(outlineIcon("badge-icon", icon));
+      badge.append(element("span", null, label));
+      badges.append(badge);
     }
-    badge.append(element("span", null, label));
-    badges.append(badge);
+    info.append(badges);
   }
-  info.append(badges);
   return info;
 }
 
@@ -93,6 +102,14 @@ function outlineIcon(className, pathData) {
 
 export function toiletPinIcon() {
   return outlineIcon("toilet-pin-icon", "M5 3h6v8H5z M11 11h8v2a5 5 0 0 1-5 5h-1l1 3H8l1-4a5 5 0 0 1-4-5v-1");
+}
+
+export function mapFocusIcon() {
+  return outlineIcon("map-focus-icon", "M18 10c0 4-6 9-6 9s-6-5-6-9a6 6 0 1 1 12 0Z M14 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z");
+}
+
+export function filterIcon(name) {
+  return outlineIcon("filter-icon", facilityIcons[name]);
 }
 
 export function appendDirections(actions, item) {
