@@ -7,15 +7,20 @@
   <script src="/web/theme.js?v=2"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="/web/styles.css?v=10">
+  <link rel="stylesheet" href="/web/styles.css?v=12">
 </head>
 <body>
   <header class="toolbar">
     <div class="toolbar-brand">
-      <h1>廁所地圖</h1>
+      <h1>
+        <span class="brand-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M5 3h6v8H5z M11 11h8v2a5 5 0 0 1-5 5h-1l1 3H8l1-4a5 5 0 0 1-4-5v-1"/></svg>
+        </span>
+        廁所地圖
+      </h1>
       <button id="show-data-source" type="button" aria-label="資料來源 · 環境部環境管理署"
         aria-haspopup="dialog" aria-controls="data-source">
-        環境部環境管理署 <span aria-hidden="true">ⓘ</span>
+        <span class="data-source-name">環境部環境管理署</span> <span aria-hidden="true">ⓘ</span>
       </button>
     </div>
     <div id="filters" class="filters" role="group" aria-label="篩選廁所">
@@ -45,19 +50,21 @@
 
   <main id="workspace" class="workspace" data-panel="nearby">
     <section class="map-area" aria-label="廁所地圖">
-      <div id="map"></div>
-      <button id="locate" type="button" class="locate" aria-label="回到我的位置" title="回到我的位置">◎</button>
+      <div id="map" role="group" aria-label="互動地圖"></div>
+      <button id="locate" type="button" class="locate" aria-label="回到我的位置" title="回到我的位置">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+      </button>
       <div id="startup" class="startup" role="status">
-        <div class="startup-symbols" aria-hidden="true"><span>🏃</span><span>🚽</span></div>
+        <span class="spinner" aria-hidden="true"></span>
         正在載入附近廁所…
       </div>
     </section>
     <section id="nearby-panel" class="panel" aria-labelledby="nearby-title">
       <div id="panel-top">
-        <button id="panel-handle" type="button" aria-label="展開清單" aria-controls="list" aria-expanded="true"></button>
         <header class="panel-head">
           <h2 id="nearby-title">附近廁所</h2>
           <p id="count" aria-live="polite"></p>
+          <button id="panel-handle" type="button" aria-controls="list" aria-expanded="true">展開清單</button>
           <button id="show-all" type="button" hidden>顯示全部</button>
         </header>
         <div class="notices">
@@ -92,6 +99,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script type="module" src="/web/app.js?v=8"></script>
+  <script type="module" src="/web/app.js?v=9"></script>
 </body>
 </html>

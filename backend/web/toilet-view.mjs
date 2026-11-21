@@ -35,7 +35,8 @@ export function toiletInformation(item, { distance, showStatus = true } = {}) {
   info.append(element("span", "name", item.name));
   const location = [item.building, formatFloor(item.floor)].filter(Boolean).join(" · ");
   if (location) info.append(element("span", "meta", location));
-  if (distance) info.append(element("span", "meta", distance));
+  const facts = element("span", "facts");
+  if (distance) facts.append(element("span", "distance", distance));
   if (showStatus) {
     const state = item.openNow === true ? "open" : item.openNow === false ? "closed" : "unknown";
     const status = element("span", "availability", {
@@ -44,8 +45,9 @@ export function toiletInformation(item, { distance, showStatus = true } = {}) {
       unknown: "開放狀態不明",
     }[state]);
     status.dataset.state = state;
-    info.append(status);
+    facts.append(status);
   }
+  if (distance || showStatus) info.append(facts);
   const badges = element("span", "badges");
   for (const [label, present, icon] of badgesFor(item)) {
     const badge = element("span", present ? "badge" : "badge absent");
@@ -101,8 +103,8 @@ export function appendDirections(actions, item) {
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.title = "開啟步行導航";
-  link.setAttribute("aria-label", "前往 " + item.name + " 的步行導航");
-  link.append(outlineIcon("directions-icon", "M12 2.5 21.5 12 12 21.5 2.5 12 12 2.5Z M9 15v-4h6m-2.5-2.5L15 11l-2.5 2.5"));
+  link.setAttribute("aria-label", "步行導航 · " + item.name);
+  link.append(outlineIcon("directions-icon", "M12 2.5 21.5 12 12 21.5 2.5 12 12 2.5Z M9 15v-4h6m-2.5-2.5L15 11l-2.5 2.5"), element("span", null, "步行導航"));
   actions.append(link);
 }
 

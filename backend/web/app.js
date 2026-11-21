@@ -1,4 +1,4 @@
-import { appendDirections, element, formatDistance, toiletInformation, toiletPinIcon } from "./toilet-view.mjs?v=5";
+import { appendDirections, element, formatDistance, toiletInformation, toiletPinIcon } from "./toilet-view.mjs?v=6";
 
 const byId = (id) => document.getElementById(id);
 const filters = byId("filters");
@@ -12,6 +12,7 @@ const panelHandle = byId("panel-handle");
 const dialog = byId("details");
 const mobile = matchMedia("(max-width: 720px)");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+const minMapHeight = parseFloat(getComputedStyle(workspace).getPropertyValue("--map-min-height"));
 const initialCenter = [25.0478, 121.517];
 const limit = 200;
 
@@ -59,7 +60,7 @@ function setPanel(level, animate = false) {
   clearPanelMotion();
   workspace.dataset.panel = level;
   panelHandle.setAttribute("aria-expanded", String(level !== "closed"));
-  panelHandle.setAttribute("aria-label", level === "expanded" ? "收合清單" : "展開清單");
+  panelHandle.textContent = level === "expanded" ? "收合清單" : "展開清單";
   const to = shouldAnimate ? panel.offsetHeight : 0;
   if (Math.abs(to - from) < 1) {
     if (wasMoving) resizeMap();
@@ -68,8 +69,8 @@ function setPanel(level, animate = false) {
 
   workspace.dataset.panelMoving = "";
   workspace.style.setProperty("--panel-height", to + "px");
-  const rebound = Math.min(12, Math.abs(to - from) * 0.08, Math.max(0, workspace.clientHeight - 44 - to));
-  const rows = (height) => "minmax(44px, 1fr) " + height + "px";
+  const rebound = Math.min(12, Math.abs(to - from) * 0.08, Math.max(0, workspace.clientHeight - minMapHeight - to));
+  const rows = (height) => `minmax(${minMapHeight}px, 1fr) ${height}px`;
   panelAnimation = workspace.animate([
     { gridTemplateRows: rows(from), easing: "cubic-bezier(.18,.8,.25,1)" },
     { gridTemplateRows: rows(to), offset: 0.7, easing: "ease-in-out" },
@@ -89,7 +90,8 @@ function setupPanelHandle() {
     if (!event.isPrimary || event.button !== 0) return;
     press = {
       id: event.pointerId, x: event.clientX, y: event.clientY, height: panel.offsetHeight,
-      minHeight: panelTop.offsetHeight + panel.clientTop, maxHeight: workspace.clientHeight - 44,
+      minHeight: panelTop.offsetHeight + panel.clientTop,
+      maxHeight: workspace.clientHeight - minMapHeight,
       dragging: false,
     };
     suppressClick = false;
@@ -179,7 +181,10 @@ function updateCardSelection() {
 function focusOnMap(item) {
   focusedId = item.id;
   updateCardSelection();
-  if (mobile.matches) setPanel("closed");
+  if (mobile.matches) {
+    setPanel("closed");
+    byId("map").focus({ preventScroll: true });
+  }
   map.setView([item.lat, item.lng], Math.max(16, map.getZoom()), { animate: !reduceMotion.matches });
 }
 
@@ -202,16 +207,16 @@ function renderList() {
     focus.setAttribute("aria-description", "在地圖上顯示此廁所");
     focus.append(toiletInformation(item, { distance: formatDistance(meters, Boolean(location)) }));
     focus.addEventListener("click", () => focusOnMap(item));
-    const row = element("div", "card-row");
-    row.append(focus);
-    appendDirections(row, item);
-    card.append(row);
+    card.append(focus);
+    const actions = element("div", "card-actions");
+    appendDirections(actions, item);
     if (item.sourceRecords?.length > 1) {
       const details = element("button", "details-button", "查看 " + item.sourceRecords.length + " 筆廁所詳情");
       details.type = "button";
       details.addEventListener("click", () => showDetails(item));
-      card.append(details);
+      actions.append(details);
     }
+    if (actions.childElementCount) card.append(actions);
     fragment.append(card);
   }
   list.replaceChildren(fragment);
