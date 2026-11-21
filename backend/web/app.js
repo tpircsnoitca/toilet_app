@@ -27,6 +27,7 @@ let timer = null;
 let cache = null;
 let hasLoaded = false;
 let panelAnimation;
+let resizingMap = false;
 const cards = new Map();
 const pins = new Map();
 
@@ -41,8 +42,13 @@ function searchFilters() {
 }
 
 function resizeMap() {
-  if (!workspace.hasAttribute("data-panel-moving")) {
-    map?.invalidateSize({ animate: false, debounceMoveend: true });
+  // Keep the geographic center while the panel changes height. Leaflet emits
+  // moveend synchronously for this resize even though the camera stays centered.
+  resizingMap = true;
+  try {
+    map.invalidateSize({ pan: true, animate: false });
+  } finally {
+    resizingMap = false;
   }
 }
 
@@ -56,16 +62,12 @@ function clearPanelMotion() {
 function setPanel(level, animate = false) {
   const shouldAnimate = animate && mobile.matches && !reduceMotion.matches;
   const from = shouldAnimate ? panel.offsetHeight : 0;
-  const wasMoving = workspace.hasAttribute("data-panel-moving");
   clearPanelMotion();
   workspace.dataset.panel = level;
   panelHandle.setAttribute("aria-expanded", String(level !== "closed"));
   panelHandle.textContent = level === "expanded" ? "收合清單" : "展開清單";
   const to = shouldAnimate ? panel.offsetHeight : 0;
-  if (Math.abs(to - from) < 1) {
-    if (wasMoving) resizeMap();
-    return;
-  }
+  if (Math.abs(to - from) < 1) return;
 
   workspace.dataset.panelMoving = "";
   workspace.style.setProperty("--panel-height", to + "px");
@@ -77,10 +79,7 @@ function setPanel(level, animate = false) {
     { gridTemplateRows: rows(to + rebound), offset: 0.85, easing: "ease-in-out" },
     { gridTemplateRows: rows(to) },
   ], { duration: 360 });
-  panelAnimation.onfinish = () => {
-    clearPanelMotion();
-    resizeMap();
-  };
+  panelAnimation.onfinish = clearPanelMotion;
 }
 
 function setupPanelHandle() {
@@ -136,7 +135,6 @@ function setupPanelHandle() {
   mobile.addEventListener("change", () => {
     press = null;
     clearPanelMotion();
-    resizeMap();
   });
 }
 
@@ -388,7 +386,7 @@ function start() {
   }
   map = L.map("map", {
     minZoom: 3, maxZoom: 19, worldCopyJump: true,
-    zoomControl: false, attributionControl: false,
+    zoomControl: false, attributionControl: false, trackResize: false,
   }).setView(initialCenter, 15);
   L.control.zoom({ zoomInTitle: "放大", zoomOutTitle: "縮小" }).addTo(map);
   L.control.attribution({ prefix: false }).addTo(map);
@@ -400,7 +398,9 @@ function start() {
 
   map.on("dragstart zoomstart", () => { userMovedMap = true; });
   map.on("movestart", () => { clearTimeout(timer); request?.abort(); });
-  map.on("moveend", () => { scheduleLoad(); });
+  map.on("moveend", () => {
+    if (!resizingMap) scheduleLoad();
+  });
   map.on("dragstart", () => { selectedIds = null; });
   new ResizeObserver(resizeMap).observe(byId("map"));
   filters.addEventListener("change", updateFilters);
